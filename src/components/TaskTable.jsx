@@ -26,6 +26,7 @@ const TaskTable = ({ initialTasks, apiEndpoint }) => {
     try {
       const response = await fetch(apiEndpoint);
       const data = await response.json();
+      //   console.log(data);
       const formattedTasks = data.slice(0, 20).map((task) => ({
         id: task.id,
         title: task.title,
