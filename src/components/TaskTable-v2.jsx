@@ -1,33 +1,19 @@
-// Install and import react-hot-toast
-// npm install react-hot-toast
-
-// TaskTable.jsx
 import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import PropTypes from "prop-types";
-import toast from "react-hot-toast";
 import Modal from "./Modal";
 import TaskForm, { STATUS_OPTIONS } from "./TaskForm";
 import TaskList from "./TaskList";
 import TaskFilter from "./TaskFilter";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const TaskTable = ({ initialTasks, apiEndpoint }) => {
   const [tasks, setTasks] = useState(initialTasks || []);
   const [filteredTasks, setFilteredTasks] = useState([]);
   const [statusFilter, setStatusFilter] = useState("all");
-  const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [tasksPerPage] = useState(20);
-
-  // Add task counters
-  const taskCounters = {
-    total: tasks.length,
-    "To Do": tasks.filter((task) => task.status === "To Do").length,
-    "In Progress": tasks.filter((task) => task.status === "In Progress").length,
-    Done: tasks.filter((task) => task.status === "Done").length,
-  };
 
   useEffect(() => {
     if (!initialTasks) {
@@ -37,7 +23,24 @@ const TaskTable = ({ initialTasks, apiEndpoint }) => {
 
   useEffect(() => {
     filterTasks();
-  }, [tasks, statusFilter, searchQuery]);
+  }, [tasks, statusFilter]);
+
+  // const fetchTasks = async () => {
+  //   try {
+  //     const response = await fetch(apiEndpoint);
+  //     const data = await response.json();
+  //     //   console.log(data);
+  //     const formattedTasks = data.slice(0, 20).map((task) => ({
+  //       id: task.id,
+  //       title: task.title,
+  //       description: `Task description ${task.id}`,
+  //       status: task.completed ? "Done" : "To Do",
+  //     }));
+  //     setTasks(formattedTasks);
+  //   } catch (error) {
+  //     console.error("Error fetching tasks:", error);
+  //   }
+  // };
 
   const fetchTasks = async () => {
     try {
@@ -52,33 +55,9 @@ const TaskTable = ({ initialTasks, apiEndpoint }) => {
       setTasks(formattedTasks);
     } catch (error) {
       console.error("Error fetching tasks:", error);
-      toast.error("Failed to fetch tasks");
     }
   };
 
-  const filterTasks = () => {
-    let filtered = tasks;
-
-    // Apply status filter
-    if (statusFilter !== "all") {
-      filtered = filtered.filter((task) => task.status === statusFilter);
-    }
-
-    // Apply search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (task) =>
-          task.title.toLowerCase().includes(query) ||
-          task.description.toLowerCase().includes(query)
-      );
-    }
-
-    setFilteredTasks(filtered);
-    setCurrentPage(1); // Reset to first page when filters change
-  };
-
-  // Pagination calculations
   const indexOfLastTask = currentPage * tasksPerPage;
   const indexOfFirstTask = indexOfLastTask - tasksPerPage;
   const currentTasks = filteredTasks.slice(indexOfFirstTask, indexOfLastTask);
@@ -92,6 +71,14 @@ const TaskTable = ({ initialTasks, apiEndpoint }) => {
     setCurrentPage((prev) => Math.min(prev + 1, totalPages));
   };
 
+  const filterTasks = () => {
+    if (statusFilter === "all") {
+      setFilteredTasks(tasks);
+    } else {
+      setFilteredTasks(tasks.filter((task) => task.status === statusFilter));
+    }
+  };
+
   const handleAddTask = (newTask) => {
     const task = {
       id: tasks.length + 1,
@@ -99,7 +86,6 @@ const TaskTable = ({ initialTasks, apiEndpoint }) => {
     };
     setTasks([...tasks, task]);
     setIsModalOpen(false);
-    toast.success("Task added successfully!");
   };
 
   const handleUpdateTask = (updatedTask) => {
@@ -108,7 +94,6 @@ const TaskTable = ({ initialTasks, apiEndpoint }) => {
     );
     setEditingTask(null);
     setIsModalOpen(false);
-    toast.success("Task updated successfully!");
   };
 
   const handleEditTask = (task) => {
@@ -118,30 +103,13 @@ const TaskTable = ({ initialTasks, apiEndpoint }) => {
 
   const handleDeleteTask = (taskId) => {
     setTasks(tasks.filter((task) => task.id !== taskId));
-    toast.success("Task deleted successfully!");
   };
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Task Manager</h1>
-
-        {/* Search and Filter Controls */}
-        <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search tasks..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <Search
-              className="absolute left-3 top-2.5 text-gray-400"
-              size={20}
-            />
-          </div>
+        <div className="flex flex-col mt-4 md:mt-0 md:flex-row gap-4 w-full md:w-auto">
           <TaskFilter value={statusFilter} onChange={setStatusFilter} />
           <button
             onClick={() => {
@@ -155,66 +123,43 @@ const TaskTable = ({ initialTasks, apiEndpoint }) => {
         </div>
       </div>
 
-      {/* Task Counters */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-gray-100 rounded-lg p-4">
-          <div className="text-sm text-gray-500">Total Tasks</div>
-          <div className="text-2xl font-bold">{taskCounters.total}</div>
-        </div>
-        {STATUS_OPTIONS.map((status) => (
-          <div key={status} className="bg-gray-100 rounded-lg p-4">
-            <div className="text-sm text-gray-500">{status}</div>
-            <div className="text-2xl font-bold">{taskCounters[status]}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Task List */}
       <TaskList
         tasks={currentTasks}
         onEdit={handleEditTask}
         onDelete={handleDeleteTask}
       />
 
-      {/* Pagination */}
-      <div className="mt-4 flex items-center justify-between">
-        <div className="text-sm text-gray-500">
-          Showing {indexOfFirstTask + 1} to{" "}
-          {Math.min(indexOfLastTask, filteredTasks.length)} of{" "}
-          {filteredTasks.length} tasks
-        </div>
-        <div className="flex items-center gap-4">
-          <button
-            onClick={handlePreviousPage}
-            disabled={currentPage === 1}
-            className={`p-2 rounded-lg ${
-              currentPage === 1
-                ? "text-gray-400 cursor-not-allowed"
-                : "text-blue-600 hover:bg-blue-50"
-            }`}
-          >
-            <ChevronLeft size={20} />
-          </button>
+      {/* Add pagination controls */}
+      <div className="mt-4 flex items-center justify-center gap-4">
+        <button
+          onClick={handlePreviousPage}
+          disabled={currentPage === 1}
+          className={`p-2 rounded-lg ${
+            currentPage === 1
+              ? "text-gray-400 cursor-not-allowed"
+              : "text-blue-600 hover:bg-blue-50"
+          }`}
+        >
+          <ChevronLeft size={20} />
+        </button>
 
-          <span className="text-sm text-gray-600">
-            Page {currentPage} of {totalPages}
-          </span>
+        <span className="text-sm text-gray-600">
+          Page {currentPage} of {totalPages}
+        </span>
 
-          <button
-            onClick={handleNextPage}
-            disabled={currentPage === totalPages}
-            className={`p-2 rounded-lg ${
-              currentPage === totalPages
-                ? "text-gray-400 cursor-not-allowed"
-                : "text-blue-600 hover:bg-blue-50"
-            }`}
-          >
-            <ChevronRight size={20} />
-          </button>
-        </div>
+        <button
+          onClick={handleNextPage}
+          disabled={currentPage === totalPages}
+          className={`p-2 rounded-lg ${
+            currentPage === totalPages
+              ? "text-gray-400 cursor-not-allowed"
+              : "text-blue-600 hover:bg-blue-50"
+          }`}
+        >
+          <ChevronRight size={20} />
+        </button>
       </div>
 
-      {/* Modal */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => {
