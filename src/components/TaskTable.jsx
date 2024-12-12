@@ -27,36 +27,6 @@ const TaskTable = ({ initialTasks, apiEndpoint }) => {
     }
   }, [initialTasks]);
 
-  // Add a useEffect to update filtered data when tasks change
-  //   useEffect(() => {
-  //     const filtered = tasks.filter((task) => {
-  //       const matchesStatus =
-  //         statusFilter === "all" || task.status === statusFilter;
-  //       const matchesSearch =
-  //         task.title.toLowerCase().includes(globalFilter.toLowerCase()) ||
-  //         task.description.toLowerCase().includes(globalFilter.toLowerCase());
-  //       return matchesStatus && matchesSearch;
-  //     });
-  //     setFilteredTasks(filtered);
-  //   }, [tasks, statusFilter, globalFilter]);
-
-  //   const fetchTasks = async () => {
-  //     try {
-  //       const response = await fetch(apiEndpoint);
-  //       const data = await response.json();
-  //       const formattedTasks = data.map((task) => ({
-  //         id: task.id,
-  //         title: task.title,
-  //         description: `Task description ${task.id}`,
-  //         status: task.completed ? "Done" : "To Do",
-  //       }));
-  //       setTasks(formattedTasks);
-  //     } catch (error) {
-  //       console.error("Error fetching tasks:", error);
-  //       toast.error("Failed to fetch tasks");
-  //     }
-  //   };
-
   const fetchTasks = async () => {
     try {
       const response = await fetch(apiEndpoint);
@@ -86,11 +56,6 @@ const TaskTable = ({ initialTasks, apiEndpoint }) => {
     setEditedRows((prev) => ({ ...prev, [newTask.id]: true }));
     toast.success("New row added! Click to edit.");
   };
-
-  //   const handleDeleteRow = (taskId) => {
-  //     setTasks(tasks.filter((task) => task.id !== taskId));
-  //     toast.success("Task deleted successfully!");
-  //   };
 
   const handleDeleteRow = (taskId) => {
     setTasks((prevTasks) => {
@@ -384,20 +349,6 @@ const TaskTable = ({ initialTasks, apiEndpoint }) => {
     </div>
   );
 };
-
-// // EditableCell PropTypes
-// EditableCell.propTypes = {
-//   getValue: PropTypes.func.isRequired,
-//   row: PropTypes.shape({
-//     original: PropTypes.shape({
-//       id: PropTypes.number.isRequired,
-//     }).isRequired,
-//   }).isRequired,
-//   column: PropTypes.shape({
-//     id: PropTypes.string.isRequired,
-//   }).isRequired,
-//   table: PropTypes.object,
-// };
 
 // TaskTable PropTypes
 TaskTable.propTypes = {
