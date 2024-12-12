@@ -1,5 +1,4 @@
-/* eslint-disable */
-
+// TaskTable.jsx
 import { useState, useEffect, useMemo } from "react";
 import {
   useReactTable,
@@ -8,54 +7,30 @@ import {
   getPaginationRowModel,
   getFilteredRowModel,
 } from "@tanstack/react-table";
-import { ChevronLeft, ChevronRight, Plus, Trash2, Search } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Pencil,
+  Trash2,
+  Search,
+} from "lucide-react";
+import Modal from "./Modal";
+import TaskForm, { STATUS_OPTIONS } from "./TaskForm";
 import toast from "react-hot-toast";
 import PropTypes from "prop-types";
 
-const STATUS_OPTIONS = ["To Do", "In Progress", "Done"];
-
 const TaskTable = ({ initialTasks, apiEndpoint }) => {
   const [tasks, setTasks] = useState(initialTasks || []);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState(null);
   const [globalFilter, setGlobalFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [editedRows, setEditedRows] = useState({});
-  const [filteredTasks, setFilteredTasks] = useState([]);
 
   useEffect(() => {
     if (!initialTasks) {
       fetchTasks();
     }
   }, [initialTasks]);
-
-  // Add a useEffect to update filtered data when tasks change
-  //   useEffect(() => {
-  //     const filtered = tasks.filter((task) => {
-  //       const matchesStatus =
-  //         statusFilter === "all" || task.status === statusFilter;
-  //       const matchesSearch =
-  //         task.title.toLowerCase().includes(globalFilter.toLowerCase()) ||
-  //         task.description.toLowerCase().includes(globalFilter.toLowerCase());
-  //       return matchesStatus && matchesSearch;
-  //     });
-  //     setFilteredTasks(filtered);
-  //   }, [tasks, statusFilter, globalFilter]);
-
-  //   const fetchTasks = async () => {
-  //     try {
-  //       const response = await fetch(apiEndpoint);
-  //       const data = await response.json();
-  //       const formattedTasks = data.map((task) => ({
-  //         id: task.id,
-  //         title: task.title,
-  //         description: `Task description ${task.id}`,
-  //         status: task.completed ? "Done" : "To Do",
-  //       }));
-  //       setTasks(formattedTasks);
-  //     } catch (error) {
-  //       console.error("Error fetching tasks:", error);
-  //       toast.error("Failed to fetch tasks");
-  //     }
-  //   };
 
   const fetchTasks = async () => {
     try {
@@ -67,130 +42,46 @@ const TaskTable = ({ initialTasks, apiEndpoint }) => {
         description: `Task description ${task.id}`,
         status: task.completed ? "Done" : "To Do",
       }));
-      setTasks(formattedTasks); // Set initial tasks
-      //   setFilteredTasks(formattedTasks); // Also set filtered tasks initially
+      setTasks(formattedTasks);
     } catch (error) {
       console.error("Error fetching tasks:", error);
       toast.error("Failed to fetch tasks");
     }
   };
 
-  const handleAddRow = () => {
-    const newTask = {
+  const handleAddTask = (newTask) => {
+    const task = {
       id: tasks.length + 1,
-      title: "New Task",
-      description: "Click to edit",
-      status: "To Do",
+      ...newTask,
     };
-    setTasks([newTask, ...tasks]);
-    setEditedRows((prev) => ({ ...prev, [newTask.id]: true }));
-    toast.success("New row added! Click to edit.");
+    setTasks([...tasks, task]);
+    setIsModalOpen(false);
+    toast.success("Task added successfully!");
   };
 
-  //   const handleDeleteRow = (taskId) => {
-  //     setTasks(tasks.filter((task) => task.id !== taskId));
-  //     toast.success("Task deleted successfully!");
-  //   };
+  const handleUpdateTask = (updatedTask) => {
+    setTasks(
+      tasks.map((task) => (task.id === updatedTask.id ? updatedTask : task))
+    );
+    setEditingTask(null);
+    setIsModalOpen(false);
+    toast.success("Task updated successfully!");
+  };
 
-  const handleDeleteRow = (taskId) => {
-    setTasks((prevTasks) => {
-      const updatedTasks = prevTasks.filter((task) => task.id !== taskId);
-      // Update filtered tasks as well
-      setFilteredTasks(
-        updatedTasks.filter((task) => {
-          const matchesStatus =
-            statusFilter === "all" || task.status === statusFilter;
-          const matchesSearch =
-            task.title.toLowerCase().includes(globalFilter.toLowerCase()) ||
-            task.description.toLowerCase().includes(globalFilter.toLowerCase());
-          return matchesStatus && matchesSearch;
-        })
-      );
-      return updatedTasks;
-    });
+  const handleDeleteTask = (taskId) => {
+    setTasks(tasks.filter((task) => task.id !== taskId));
     toast.success("Task deleted successfully!");
   };
 
-  const handleCellEdit = (rowId, columnId, value) => {
-    setTasks((prev) =>
-      prev.map((row) => {
-        if (row.id === rowId) {
-          return {
-            ...row,
-            [columnId]: value,
-          };
-        }
-        return row;
-      })
-    );
-  };
-
-  // Editable Cell Component
-  const EditableCell = ({ getValue, row, column, table }) => {
-    const initialValue = getValue();
-    const [value, setValue] = useState(initialValue);
-    const [isEditing, setIsEditing] = useState(false);
-
-    const onBlur = () => {
-      setIsEditing(false);
-      if (value !== initialValue) {
-        handleCellEdit(row.original.id, column.id, value);
-        toast.success("Cell updated successfully!");
-      }
-    };
-
-    if (column.id === "status" && isEditing) {
-      return (
-        <select
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onBlur={onBlur}
-          autoFocus
-          className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          {["To Do", "In Progress", "Done"].map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-      );
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "Done":
+        return "bg-green-100 text-green-800";
+      case "In Progress":
+        return "bg-yellow-100 text-yellow-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
-
-    if (isEditing) {
-      return (
-        <input
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onBlur={onBlur}
-          autoFocus
-          className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      );
-    }
-
-    return (
-      <div
-        className="cursor-pointer p-2 -m-2 rounded hover:bg-gray-100"
-        onClick={() => setIsEditing(true)}
-      >
-        {column.id === "status" ? (
-          <span
-            className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-              value === "Done"
-                ? "bg-green-100 text-green-800"
-                : value === "In Progress"
-                ? "bg-yellow-100 text-yellow-800"
-                : "bg-gray-100 text-gray-800"
-            }`}
-          >
-            {value}
-          </span>
-        ) : (
-          value
-        )}
-      </div>
-    );
   };
 
   const columns = useMemo(
@@ -199,33 +90,49 @@ const TaskTable = ({ initialTasks, apiEndpoint }) => {
         accessorKey: "id",
         header: "ID",
         size: 70,
-        enableEditing: false,
       },
       {
         accessorKey: "title",
         header: "Title",
-        cell: EditableCell,
       },
       {
         accessorKey: "description",
         header: "Description",
-        cell: EditableCell,
       },
       {
         accessorKey: "status",
         header: "Status",
-        cell: EditableCell,
+        cell: ({ row }) => (
+          <span
+            className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(
+              row.original.status
+            )}`}
+          >
+            {row.original.status}
+          </span>
+        ),
       },
       {
         id: "actions",
         header: "Actions",
         cell: ({ row }) => (
-          <button
-            onClick={() => handleDeleteRow(row.original.id)}
-            className="p-1 hover:bg-gray-100 rounded text-red-600"
-          >
-            <Trash2 size={16} />
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                setEditingTask(row.original);
+                setIsModalOpen(true);
+              }}
+              className="p-1 hover:bg-gray-100 rounded text-blue-600"
+            >
+              <Pencil size={16} />
+            </button>
+            <button
+              onClick={() => handleDeleteTask(row.original.id)}
+              className="p-1 hover:bg-gray-100 rounded text-red-600"
+            >
+              <Trash2 size={16} />
+            </button>
+          </div>
         ),
       },
     ],
@@ -256,6 +163,14 @@ const TaskTable = ({ initialTasks, apiEndpoint }) => {
     },
   });
 
+  // Task counters
+  const taskCounters = {
+    total: tasks.length,
+    "To Do": tasks.filter((t) => t.status === "To Do").length,
+    "In Progress": tasks.filter((t) => t.status === "In Progress").length,
+    Done: tasks.filter((t) => t.status === "Done").length,
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Header Section */}
@@ -281,18 +196,32 @@ const TaskTable = ({ initialTasks, apiEndpoint }) => {
             className="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">All Status</option>
-            <option value="To Do">To Do</option>
-            <option value="In Progress">In Progress</option>
-            <option value="Done">Done</option>
+            {STATUS_OPTIONS.map((status) => (
+              <option key={status} value={status}>
+                {status}
+              </option>
+            ))}
           </select>
           <button
-            onClick={handleAddRow}
-            className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2"
+            onClick={() => {
+              setEditingTask(null);
+              setIsModalOpen(true);
+            }}
+            className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
           >
-            <Plus size={20} />
             Add New Task
           </button>
         </div>
+      </div>
+
+      {/* Task Counters */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        {Object.entries(taskCounters).map(([label, count]) => (
+          <div key={label} className="bg-gray-100 rounded-lg p-4">
+            <div className="text-sm text-gray-500">{label}</div>
+            <div className="text-2xl font-bold">{count}</div>
+          </div>
+        ))}
       </div>
 
       {/* Table */}
@@ -305,7 +234,7 @@ const TaskTable = ({ initialTasks, apiEndpoint }) => {
                   {headerGroup.headers.map((header) => (
                     <th
                       key={header.id}
-                      className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                     >
                       {flexRender(
                         header.column.columnDef.header,
@@ -381,25 +310,29 @@ const TaskTable = ({ initialTasks, apiEndpoint }) => {
           </button>
         </div>
       </div>
+
+      {/* Modal */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingTask(null);
+        }}
+        title={editingTask ? "Edit Task" : "Add New Task"}
+      >
+        <TaskForm
+          task={editingTask}
+          onSubmit={editingTask ? handleUpdateTask : handleAddTask}
+          onCancel={() => {
+            setIsModalOpen(false);
+            setEditingTask(null);
+          }}
+        />
+      </Modal>
     </div>
   );
 };
 
-// // EditableCell PropTypes
-// EditableCell.propTypes = {
-//   getValue: PropTypes.func.isRequired,
-//   row: PropTypes.shape({
-//     original: PropTypes.shape({
-//       id: PropTypes.number.isRequired,
-//     }).isRequired,
-//   }).isRequired,
-//   column: PropTypes.shape({
-//     id: PropTypes.string.isRequired,
-//   }).isRequired,
-//   table: PropTypes.object,
-// };
-
-// TaskTable PropTypes
 TaskTable.propTypes = {
   initialTasks: PropTypes.arrayOf(
     PropTypes.shape({
